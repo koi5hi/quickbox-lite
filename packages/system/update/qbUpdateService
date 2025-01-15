@@ -63,7 +63,7 @@ function _updateservice() {
 		if [[ ! $(which npm) ]] || [[ $(node --version) =~ "v6" ]]; then
 			_info "Installing Node.js..."
 			cd /tmp || exit 1
-			_execute "curl -sL https://deb.nodesource.com/setup_12.x -o nodesource_setup.sh"
+			_execute "curl -sL --retry 3 --retry-max-time 60 https://deb.nodesource.com/setup_18.x -o nodesource_setup.sh"
 			bash nodesource_setup.sh >>"${OUTTO}" 2>&1
 			exitstatus=$?
 			counter=0
@@ -95,12 +95,12 @@ function _updateservice() {
 		touch /install/.quickbox-ws.lock
 		_success "QuickBox service updated"
 	else
-		# upgrade to v14
-		_info "Upgrade nodejs to v14"
-		if [[ ! $(which npm) ]] || [[ ! $(node --version) =~ "v14" ]]; then
+		# upgrade to v18
+		_info "Upgrade nodejs to v18"
+		if [[ ! $(which npm) ]] || [[ ! $(node --version) =~ "v18" ]]; then
 			_info "Upgrading Node.js..."
 			cd /tmp || exit 1
-			_execute "curl -sL https://deb.nodesource.com/setup_14.x -o nodesource_setup.sh"
+			_execute "curl -sL --retry 3 --retry-max-time 60 https://deb.nodesource.com/setup_18.x -o nodesource_setup.sh"
 			bash nodesource_setup.sh >>"${OUTTO}" 2>&1
 			exitstatus=$?
 			counter=0
@@ -263,6 +263,13 @@ WEBC
 		_download_latest_ttyd
 		_execute "systemctl restart ttyd.service"
 		_info "ttyd update success"
+	fi
+	# enable writable ttyd
+	if (grep -c 'ExecStart=/usr/local/bin/ttyd -i 127.0.0.1 -p 4200 bash' < /etc/systemd/system/ttyd.service > /dev/null); then
+		cp ${local_setup_template}systemd/ttyd.service.template /etc/systemd/system/ttyd.service
+		sed -i "s/USERNAME/${username}/g" /etc/systemd/system/ttyd.service
+		_execute "systemctl daemon-reload"
+		_execute "systemctl restart ttyd.service"
 	fi
 }
 

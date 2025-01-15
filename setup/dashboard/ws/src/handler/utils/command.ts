@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import * as fs from "fs";
+import fs from "fs";
 
 import Constant from "../../constant";
 import { WatchedConfig } from "../../watchedConfig";
 
 
-export interface CommandType {
-    [key: string]: {
-        template: string;
-        operations: string[];
-        targets: string[];
-    };
-}
+export type CommandType = Record<string, {
+    template: string;
+    operations: string[];
+    targets: string[];
+} | undefined>;
 
 /**
  * get file list from given directory
@@ -39,6 +37,7 @@ export function buildCommand(payload: string | undefined, config: CommandType | 
         throw new Error(`Invalid config with type '${Object.prototype.toString.call(config)}'`);
     }
     let [command, operation, target] = payload.split(":");
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (command === undefined || operation === undefined || target === undefined) {
         throw new Error(`Invalid payload '${payload}'`);
     }

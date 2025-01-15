@@ -105,6 +105,11 @@
     id: "#appstat_rtorrent",
     time: 5000
   }, {
+    key: "SABNZBD",
+    url: "/widgets/service_status.php?service=sabnzbd",
+    id: "#appstat_sabnzbd",
+    time: 5000
+  }, {
     key: "SYNCTHING",
     url: "/widgets/service_status.php?service=syncthing",
     id: "#appstat_syncthing",
@@ -118,6 +123,11 @@
     key: "QBITTORRENT",
     url: "/widgets/service_status.php?service=qbittorrent",
     id: "#appstat_qbittorrent",
+    time: 5000
+  }, {
+    key: "QBITTORRENTCLIENTBLOCKER",
+    url: "/widgets/service_status.php?service=qbittorrent-clientblocker",
+    id: "#appstat_qbittorrent-clientblocker",
     time: 5000
   }, {
     key: "WEBDAV",
@@ -148,64 +158,72 @@
 
   const system_status_list = [{
     key: "NETWORK",
-    url: "/widgets/net_status.php",
+    url: "/node/net_status.php",
     id: undefined,
     override: function (dataJSON) {
-      function format (length, factor, tail, fractionDigits) {
-        return (length / Math.pow(2, factor)).toFixed(fractionDigits).toString() + " " + tail;
-      }
-
       function formatsize (length) {
-        if (length >= Math.pow(2, 40)) {
-          return format(length, 40, "TB/s", 2);
-        } else if (length >= Math.pow(2, 30)) {
-          return format(length, 30, "GB/s", 2);
-        } else if (length >= Math.pow(2, 20)) {
-          return format(length, 20, "MB/s", 2);
-        } else if (length >= Math.pow(2, 10)) {
-          return format(length, 10, "KB/s", 2);
-        } else {
-          return format(Math.max(0, length), 0, "B/s", 0);
-        }
+        const value = isNaN(length) ? 0 : length;
+        const suffixList = ["B/s", "KB/s", "MB/s", "GB/s", "TB/s"];
+        const idx = Math.min(Math.max(Math.floor(Math.log2(value) / 10), 0), suffixList.length - 1);
+        return (value / Math.pow(2, idx * 10)).toFixed(idx > 0 ? 2 : 0).toString() + " " + suffixList[idx];
       }
 
-      const duration = (dataJSON.NetTimeStamp - window.NetTimeStamp);
-      const length = dataJSON.NetOutSpeed.length;
-      for (let i = 0; i < length; ++i) {
-        if (window.NetOutSpeed[i] !== undefined) {
-          const speed = (dataJSON.NetOutSpeed[i] - window.NetOutSpeed[i]) / duration;
-          const speed_str = formatsize(speed);
-          $("#NetOutSpeed" + i).html(speed_str);
+      if (window.ts === undefined || window.net === undefined) {
+        window.net = dataJSON.net;
+        window.ts = dataJSON.ts;
+        return;
+      }
+
+      const duration = (dataJSON.ts - window.ts);
+      if (duration < 1e-5) {
+        return;
+      }
+
+      const interfaces = Object.keys(dataJSON.net);
+      let invalid_data_flag = false;
+      for (const network_interface of interfaces) {
+        const out_speed = (dataJSON.net[network_interface].tx_bytes - window.net[network_interface].tx_bytes) / duration;
+        if (isNaN(out_speed)) {
+          invalid_data_flag = true;
+          console.warn(`[NaN DETECTED] ${network_interface}/tx`, out_speed, dataJSON.net[network_interface], window.net[network_interface], duration);
+        } else {
+          const out_speed_str = formatsize(out_speed);
+          $(`#net_${network_interface}_tx`).html(out_speed_str);
         }
-        if (window.NetInputSpeed[i] !== undefined) {
-          const speed = (dataJSON.NetInputSpeed[i] - window.NetInputSpeed[i]) / duration;
-          const speed_str = formatsize(speed);
-          $("#NetInputSpeed" + i).html(speed_str);
+
+        const in_speed = (dataJSON.net[network_interface].rx_bytes - window.net[network_interface].rx_bytes) / duration;
+        if (isNaN(in_speed)) {
+          invalid_data_flag = true;
+          console.warn(`[NaN DETECTED] ${network_interface}/rx`, in_speed, dataJSON.net[network_interface], window.net[network_interface], duration);
+        } else {
+          const in_speed_str = formatsize(in_speed);
+          $(`#net_${network_interface}_rx`).html(in_speed_str);
         }
       }
-      window.NetOutSpeed = dataJSON.NetOutSpeed;
-      window.NetInputSpeed = dataJSON.NetInputSpeed;
-      window.NetTimeStamp = dataJSON.NetTimeStamp;
+      if (!invalid_data_flag) {
+        window.net = dataJSON.net;
+        window.ts = dataJSON.ts;
+      }
     },
     time: 1000
   }, {
     key: "UPTIME",
-    url: "/widgets/up.php",
+    url: "/node/up.php",
     id: "#uptime",
     time: 60000
   }, {
     key: "TOP",
-    url: "/widgets/load.php",
+    url: "/node/load.php",
     id: "#cpuload",
     time: 60000
   }, {
     key: "BANDWIDTH",
-    url: "/widgets/bw_tables.php",
-    url_template: "/widgets/bw_tables.php?page={0}",
+    url: "/node/bw_tables.php",
+    url_template: "/node/bw_tables.php?page={0}",
     id: "#bw_tables",
     before: function () {
       const page = localStorage.getItem("bw_tables:page");
-      if (page && page.length === 1 && "shdm".includes(page)) {
+      if (page && page.length === 1 && "shdmt".includes(page)) {
         this.url = this.url_template.replace("{0}", page);
       }
       return true;
@@ -213,12 +231,12 @@
     time: 60000
   }, {
     key: "DISK_USAGE",
-    url: "/widgets/disk_data.php",
+    url: "/node/disk_data.php",
     id: "#disk_data",
     time: 15000
   }, {
     key: "RAM_USAGE",
-    url: "/widgets/ram_stats.php",
+    url: "/node/ram_stats.php",
     id: "#meterram",
     time: 10000
   }, {
@@ -226,6 +244,7 @@
     url: "/db/output.log",
     id: "#sshoutput",
     time: 2500,
+    // eslint-disable-next-line no-unused-vars
     before: function (task) {
       return $("#sysResponse").is(":visible");
     },
@@ -324,4 +343,5 @@
   document.addEventListener("DOMContentLoaded", function () {
     Visibility.afterPrerendering(start_status_update);
   });
+  // socket.emit("i18n", "zh");
 })(window.jQuery);

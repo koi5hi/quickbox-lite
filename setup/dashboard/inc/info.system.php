@@ -33,6 +33,7 @@ class SystemInfo {
         @preg_match_all("/model\s+name\s{0,}\:+\s{0,}([^\:]+)[\r\n]+/s", $info, $model);
         @preg_match_all("/cpu\s+MHz\s{0,}\:+\s{0,}([\d\.]+)[\r\n]+/", $info, $mhz);
         @preg_match_all("/cache\s+size\s{0,}\:+\s{0,}([\d\.]+\s{0,}[A-Z]+[\r\n]+)/", $info, $cache);
+        /* @phpstan-ignore-next-line */
         if (is_array($model[1]) !== false) {
             $cpu_count     = count($model[1]);
             $cpu_model     = $model[1][0];
@@ -81,25 +82,20 @@ class SystemInfo {
     }
 
     /**
-     * @return array<string,array<int>>
+     * @return array<string,array<string,int>>
      */
     public static function netinfo() {
-        $info = @file('/proc/net/dev');
-        $res  = [];
-        if (!is_array($info)) {
-            return $res;
-        }
+        $interfaces = self::enuminterface();
+        $res        = [];
+        foreach ($interfaces as $interface) {
+            $rx_bytes = (int) @file_get_contents("/sys/class/net/{$interface}/statistics/rx_bytes");
+            $tx_bytes = (int) @file_get_contents("/sys/class/net/{$interface}/statistics/tx_bytes");
 
-        $Receive  = [];
-        $Transmit = [];
-
-        for ($i = 2; $i < count($info); ++$i) {
-            preg_match_all("/(?<name>[^\s]+):[\s]{0,}(?<rx_bytes>\d+)\s+(?:\d+\s+){7}(?<tx_bytes>\d+)\s+/", $info[$i], $group);
-            $Receive[$i - 2]  = (int) $group['rx_bytes'][0]; // Receive data in bytes
-            $Transmit[$i - 2] = (int) $group['tx_bytes'][0]; // Transmit data in bytes
+            $res[$interface] = [
+                'rx_bytes' => $rx_bytes, // Receive data in bytes
+                'tx_bytes' => $tx_bytes, // Transmit data in bytes
+            ];
         }
-        $res['Receive']  = $Receive;
-        $res['Transmit'] = $Transmit;
 
         return $res;
     }
@@ -108,16 +104,17 @@ class SystemInfo {
      * @return array<int,string>
      */
     public static function enuminterface() {
-        $info = @file('/proc/net/dev');
-        $res  = [];
-        if (!is_array($info)) {
-            return $res;
+        $interfaces = net_get_interfaces();
+        if ($interfaces === false) {
+            return [];
         }
-        for ($i = 2; $i < count($info); ++$i) {
-            preg_match_all("/(?<name>[^\s]+):[\s]{0,}(?<rx_bytes>\d+)\s+(?:\d+\s+){7}(?<tx_bytes>\d+)\s+/", $info[$i], $group);
-            $res[$i - 2] = $group['name'][0];
+        $ret = [];
+        foreach ($interfaces as $key => $value) {
+            if ($value['up'] === true) {
+                $ret[] = $key;
+            }
         }
 
-        return $res;
+        return $ret;
     }
 }

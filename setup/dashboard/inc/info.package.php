@@ -196,6 +196,13 @@ $packageList = [
             ],
         ],
     ], [
+        'package'     => 'h5ai',
+        'name'        => 'h5ai',
+        'description' => 'H5AI',
+        'lockfile'    => '/install/.h5ai.lock',
+        'install'     => 'BOX_TOOLTIP_H5AI',
+        'boxonly'     => true,
+    ], [
         'package'     => 'jellyfin',
         'name'        => 'Jellyfin',
         'description' => 'JELLYFIN',
@@ -324,6 +331,20 @@ $packageList = [
         'uninstall'   => 'UNINSTALL_RUTORRENT_TXT',
         'boxonly'     => false,
     ], [
+        'package'     => 'sabnzbd',
+        'name'        => 'SABnzbd',
+        'description' => 'SABNZBD',
+        'lockfile'    => "/install/.{$username}.sabnzbd.lock",
+        'uninstall'   => 'UNINSTALL_SABNZBD_TXT',
+        'boxonly'     => false,
+        'services'    => [
+            'sabnzbd' => [
+                'process'  => 'sabnzbd',
+                'name'     => 'SABnzbd',
+                'username' => $username,
+            ],
+        ],
+    ], [
         'package'     => 'speedtest',
         'name'        => 'SpeedTest',
         'description' => 'SPEEDTEST',
@@ -369,6 +390,20 @@ $packageList = [
             'qbittorrent' => [
                 'process'  => 'qbittorrent-nox',
                 'name'     => 'qBittorrent',
+                'username' => $username,
+            ],
+        ],
+    ], [
+        'package'     => 'qbclientblocker',
+        'name'        => 'qBittorrent-ClientBlocker',
+        'description' => 'QBITTORRENTCLIENTBLOCKER',
+        'lockfile'    => "/install/.{$username}.qbittorrent-clientblocker.lock",
+        'uninstall'   => 'UNINSTALL_QBITTORRENTCLIENTBLOCKER_TXT',
+        'boxonly'     => false,
+        'services'    => [
+            'qbittorrent-clientblocker' => [
+                'process'  => 'qBittorrent-ClientBlocker',
+                'name'     => 'qBittorrent-ClientBlocker',
                 'username' => $username,
             ],
         ],
@@ -439,116 +474,137 @@ foreach ($packageList as $package) {
     if (array_key_exists($package['package'], $packageMap)) {
         error_log("package '{$package['package']}' duplicated in package list!", 0);
     }
-    $packageMap[$package['package']] = $package;
+    $packageName              = (string) $package['package'];
+    $packageMap[$packageName] = $package;
+}
+
+/**
+ * @param string $packageName
+ *
+ * @return array<string,mixed>|null
+ */
+function getPackage($packageName) {
+    global $packageMap;
+    if (array_key_exists($packageName, $packageMap)) {
+        return $packageMap[$packageName];
+    }
+
+    return null;
 }
 
 $menuList = [
     [
         'name'    => 'ruTorrent',
         'service' => true,
-        'ref'     => $packageMap['rutorrent'],
+        'ref'     => getPackage('rutorrent'),
         'url'     => '/rutorrent/',
         'logo'    => 'img/brands/rtorrent.png',
     ], [
         'name'    => 'Flood',
         'service' => true,
-        'ref'     => $packageMap['flood'],
+        'ref'     => getPackage('flood'),
         'url'     => "/{$username}/flood/",
         'logo'    => 'img/brands/flood.png',
     ], [
         'name'    => 'Deluge Web',
         'service' => true,
-        'ref'     => $packageMap['deluge'],
+        'ref'     => getPackage('deluge'),
         'url'     => '/deluge/',
         'logo'    => 'img/brands/deluge.png',
     ], [
         'name'    => 'Transmission Web Control',
         'service' => true,
-        'ref'     => $packageMap['transmission'],
+        'ref'     => getPackage('transmission'),
         'url'     => '/transmission',
         'logo'    => 'img/brands/transmission.png',
     ], [
         'name'    => 'qBittorrent',
         'service' => true,
-        'ref'     => $packageMap['qbittorrent'],
+        'ref'     => getPackage('qbittorrent'),
         'url'     => '/qbittorrent/',
         'logo'    => 'img/brands/qbittorrent.png',
     ], [
         'name'    => 'BTSync',
         'service' => true,
-        'ref'     => $packageMap['btsync'],
+        'ref'     => getPackage('btsync'),
         'url'     => "/{$username}.btsync/",
         'logo'    => 'img/brands/btsync.png',
     ], [
         'name'    => 'Emby',
         'service' => true,
-        'ref'     => $packageMap['emby'],
+        'ref'     => getPackage('emby'),
         'url'     => '/emby/',
         'logo'    => 'img/brands/emby.png',
     ], [
         'name'    => 'File Browser',
         'service' => true,
-        'ref'     => $packageMap['filebrowser'],
+        'ref'     => getPackage('filebrowser'),
         'url'     => '/filebrowser/',
         'logo'    => 'img/brands/filebrowser.png',
     ], [
         'name'    => 'File Browser Enhanced',
         'service' => true,
-        'ref'     => $packageMap['filebrowser-ee'],
+        'ref'     => getPackage('filebrowser-ee'),
         'url'     => '/filebrowser-ee/',
         'logo'    => 'img/brands/filebrowser.png',
     ], [
         'name'    => 'FlexGet',
         'service' => true,
-        'ref'     => $packageMap['flexget'],
+        'ref'     => getPackage('flexget'),
         'url'     => '/flexget/',
         'logo'    => 'img/brands/flexget.png',
     ], [
         'name'    => 'Jellyfin',
         'service' => true,
-        'ref'     => $packageMap['jellyfin'],
+        'ref'     => getPackage('jellyfin'),
         'url'     => '/jellyfin/',
         'logo'    => 'img/brands/jellyfin.png',
     ], [
         'name'    => 'NetData',
         'service' => true,
-        'ref'     => $packageMap['netdata'],
+        'ref'     => getPackage('netdata'),
         'url'     => '/netdata/',
         'logo'    => 'img/brands/netdata.png',
     ], [
         'name'    => 'noVNC',
         'service' => true,
-        'ref'     => $packageMap['novnc'],
+        'ref'     => getPackage('novnc'),
         'url'     => '/vnc/',
         'logo'    => 'img/brands/novnc.png',
     ], [
         'name'    => 'Plex',
         'service' => true,
-        'ref'     => $packageMap['plex'],
+        'ref'     => getPackage('plex'),
         'url'     => '/web/',
         'logo'    => 'img/brands/plex.png',
     ], [
         'name'    => 'Rclone',
         'service' => true,
-        'ref'     => $packageMap['rclone'],
+        'ref'     => getPackage('rclone'),
         'url'     => '/rclone/',
         'logo'    => 'img/brands/rclone.png',
     ], [
+        'name'    => 'SABnzbd',
+        'service' => true,
+        'ref'     => getPackage('sabnzbd'),
+        'url'     => '/sabnzbd',
+        'logo'    => 'img/brands/sabnzbd.png',
+    ], [
         'name'    => 'SpeedTest',
         'service' => false,
-        'ref'     => $packageMap['speedtest'],
+        'ref'     => getPackage('speedtest'),
         'url'     => '/speedtest/',
         'logo'    => 'img/brands/speedtest.png',
     ], [
         'name'    => 'Syncthing',
         'service' => true,
-        'ref'     => $packageMap['syncthing'],
+        'ref'     => getPackage('syncthing'),
         'url'     => "/{$username}.syncthing/",
         'logo'    => 'img/brands/syncthing.png',
     ], [
         'name'    => 'ZNC',
         'service' => true,
-        'ref'     => $packageMap['znc'],
+        'ref'     => getPackage('znc'),
         'url'     => '/znc/',
         'logo'    => 'img/brands/znc.png',
     ],
@@ -557,19 +613,19 @@ $menuList = [
 $downloadList = [
     [
         'name' => 'rTorrent',
-        'ref'  => $packageMap['rtorrent'],
+        'ref'  => getPackage('rtorrent'),
         'url'  => "/{$username}.rtorrent.downloads",
     ], [
         'name' => 'Deluge',
-        'ref'  => $packageMap['deluge'],
+        'ref'  => getPackage('deluge'),
         'url'  => "/{$username}.deluge.downloads",
     ], [
         'name' => 'Transmission',
-        'ref'  => $packageMap['transmission'],
+        'ref'  => getPackage('transmission'),
         'url'  => "/{$username}.transmission.downloads",
     ], [
         'name' => 'qBittorrent',
-        'ref'  => $packageMap['qbittorrent'],
+        'ref'  => getPackage('qbittorrent'),
         'url'  => "/{$username}.qbittorrent.downloads",
     ], [
         'name'     => 'OpenVPN Config',

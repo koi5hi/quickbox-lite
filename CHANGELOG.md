@@ -1,3 +1,136 @@
+## CHANGELOG v1.5.11
+
+*Changelog update Friday, Jan 10, 2025*
+
+### General additions
+
+- Support Ubuntu 24.04
+
+### Important changes
+
+- Discarding the Debian 10 LTS installation ([Release EOL](https://lists.debian.org/debian-lts-announce/2024/05/msg00002.html))
+- Discarding Deluge 1.3.15 on all OS versions
+
+### Function improved
+
+- Use Static build for all qBitTorrent version
+- Transmission 4 is available
+
+### Function updated
+
+- quickbox backend dependency (by Tautcony)
+- qBittorrent default version upgraded to v4.6.7
+- Transmission WebUI now use TrguiNG by default
+- Python dependency default version upgraded to v3.12.x
+- `box update flexget -v <VERSION>` can be used to specify version
+
+### Bug fixed
+
+- Fix broken btsync installer
+- Fix broken ruTorrent installer
+- Fix broken noVNC installer
+- Fix broken h5ai download url
+
+---
+
+## CHANGELOG v1.5.10
+
+*Changelog update Wednesday, Apr 3, 2024*
+
+### General additions
+
+- Support qBittorrent-Clientblocker
+
+### Important changes
+
+- Discarding the Ubuntu 18.04 installation ([Release EOL](https://wiki.ubuntu.com/Releases))
+
+### Function improved
+
+- Migrating Panel State Refresh to React (by Tautcony)
+
+### Function updated
+
+- qBittorrent default version upgraded to v4.5.5
+- Transmission default version upgrade to v3.0
+- Python dependency default version upgraded to v3.11.x
+
+### Bug fixed
+
+- Fix broken Netdata installer
+- Fix broken ZNC installer
+
+---
+
+## CHANGELOG v1.5.9
+
+*Changelog update Sunday, Dec 10, 2023*
+
+### General additions
+
+- facilitating the selection of the Transmission version during installation(`--transmission-version`)
+
+### Function improved
+
+- resolving dependency issues by installing DenyHosts using venv
+- only use released tag on acme.sh
+- apply new node.js repo
+
+### Function updated
+
+- add writable flag to [newer ttyd](https://github.com/tsl0922/ttyd/commit/f8efcddb0b615de7086fdb3c5f452d1ee42f32a3)
+- disable webUI UPNP on qBittorrent by default
+
+### Bug fixed
+
+---
+
+## CHANGELOG v1.5.8
+
+*Changelog update Thursday, Jul 27, 2023*
+
+### General additions
+
+- support Debian 12.
+- support Deluge 2.1.x.
+- support [SABnzbd](https://sabnzbd.org/).
+
+### Function improved
+
+- update vnstat statistics on dashbaord (by Tautcony).
+- update qBittorrent systemd service.
+- use venv for denyhosts.
+
+### Function updated
+
+- update node.js to v18.
+- update dashboard dependency.
+
+### Bug fixed
+
+---
+
+## CHANGELOG v1.5.7
+
+*Changelog update Friday, Mar 03, 2023*
+
+### General additions
+
+- support h5ai to generate a shared index.
+
+### Function improved
+
+- update qBittorrent systemd config
+
+### Function updated
+
+- ruTorrent update to v4.x
+- update dashboard dependency
+
+### Bug fixed
+
+---
+
 ## CHANGELOG v1.5.6
 
 *Changelog update Tuesday,Sep 27, 2022*

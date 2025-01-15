@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import axios from "axios";
-import * as https from "https";
+import https from "https";
 import { Socket } from "socket.io";
 
 import Constant from "../constant";
+import { widgetsLoad } from "../widgets/load";
+import { netStatus } from "../widgets/net_status";
+import { upTime } from "../widgets/up";
+import { diskData } from "../widgets/disk_data";
+import { ramStats } from "../widgets/ram_stats";
+import { getIfaceConfig } from "../utils/vnstat";
+import { bwTables } from "../widgets/bw_tables";
 
 interface Payload {
     key: string;
@@ -19,6 +26,8 @@ const afetch = axios.create({
     }),
 });
 
+const iface = getIfaceConfig();
+
 const parseUrl = (url: string) => {
     let u: URL;
     if (url.toLowerCase().startsWith("http")) {
@@ -26,19 +35,26 @@ const parseUrl = (url: string) => {
     } else {
         u = new URL(url, "http://localhost");
     }
-    const pathName = u.pathname;
-    const args = {};
+    const pathname = u.pathname;
+    const args: Record<string, string> = {};
     u.searchParams.forEach((v, k) => {
         args[k] = v;
     });
     return {
-        pathName,
+        pathname,
         args,
     };
 };
 
+
 const messageHandler = async (payload: Payload, client: Socket) => {
-    const ret = {
+    const ret: {
+        key: string;
+        pathName: string;
+        success: boolean;
+        message: string;
+        response: string|object;
+    } = {
         key: payload.key,
         pathName: payload.url,
         success: true,
@@ -47,7 +63,29 @@ const messageHandler = async (payload: Payload, client: Socket) => {
     };
     try {
         const req = parseUrl(payload.url);
-        ret.response = (await afetch.get(req.pathName, { params: req.args })).data;
+        switch (req.pathname) {
+            case "/node/load.php":
+                ret.response = await widgetsLoad();
+                break;
+            case "/node/net_status.php":
+                ret.response = await netStatus();
+                break;
+            case "/node/up.php":
+                ret.response = upTime();
+                break;
+            case "/node/disk_data.php":
+                ret.response = await diskData();
+                break;
+            case "/node/ram_stats.php":
+                ret.response = await ramStats();
+                break;
+            case "/node/bw_tables.php":
+                ret.response = await bwTables(iface, req.args["page"] as "h"|"d"|"m"|"t");
+                break;
+            default:
+                ret.response = (await afetch.get(req.pathname, { params: req.args })).data;
+                break;
+        }
     } catch (error) {
         ret.message = error instanceof Error ? error.toString() : "Unknown error";
         ret.success = false;
@@ -56,10 +94,9 @@ const messageHandler = async (payload: Payload, client: Socket) => {
     }
 };
 
-// eslint-disable-next-line no-unused-vars
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export default (client: Socket, next?: (err?: Error) => void) => {
-    client.on(Constant.EVENT_MESSAGE, payload => messageHandler(payload, client));
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    client.on(Constant.EVENT_MESSAGE, async payload => { await messageHandler(payload, client); });
     if (next) {
         next();
     }

@@ -4,7 +4,7 @@
 #
 # GitHub:   https://github.com/amefs/quickbox-lite
 # Author:   Amefs
-# Current version:  v1.5.6
+# Current version:  v1.5.11
 # URL:
 # Original Repo:    https://github.com/QuickBox/QB
 # Credits to:       QuickBox.io
@@ -105,10 +105,10 @@ function _init() {
 		echo -e "XXX\n10\nPreparing scripts... \nXXX"
 		if [[ $DISTRO == Ubuntu && $CODENAME =~ ("bionic"|"focal") ]]; then
 			apt-get -y install git curl wget dos2unix python apt-transport-https software-properties-common dnsutils unzip jq >/dev/null 2>&1
-		elif [[ $DISTRO == Ubuntu && $CODENAME =~ ("jammy") ]]; then
+		elif [[ $DISTRO == Ubuntu && $CODENAME =~ ("jammy"|"noble") ]]; then
 			apt-get -y install git curl wget dos2unix python3 apt-transport-https software-properties-common dnsutils unzip jq >/dev/null 2>&1
 		elif [[ $DISTRO == Debian ]]; then
-			apt-get -y install git curl wget dos2unix python apt-transport-https software-properties-common gnupg2 ca-certificates dnsutils unzip jq >/dev/null 2>&1
+			apt-get -y install git curl wget dos2unix python3 apt-transport-https software-properties-common gnupg2 ca-certificates dnsutils unzip jq >/dev/null 2>&1
 		fi
 		echo -e "XXX\n20\nPreparing scripts... \nXXX"
 		dos2unix $(find ${local_prefix} -type f) >/dev/null 2>&1
@@ -199,7 +199,7 @@ function _checkdistro() {
 		whiptail --title "$ERROR_TITLE_OS" --msgbox "${ERROR_TEXT_DESTRO_1}${DISTRO}${ERROR_TEXT_DESTRO_2}" --ok-button "$BUTTON_OK" 8 72
 		_defaultcolor
 		exit 1
-	elif [[ ! "$CODENAME" =~ ("bionic"|"buster"|"bullseye"|"focal"|"jammy") ]]; then
+	elif [[ ! "$CODENAME" =~ ("bullseye"|"focal"|"jammy"|"bookworm"|"noble") ]]; then
 		_errorcolor
 		whiptail --title "$ERROR_TITLE_OS" --msgbox "${ERROR_TEXT_CODENAME_1}${DISTRO}${ERROR_TEXT_CODENAME_2}" --ok-button "$BUTTON_OK" 8 72
 		_defaultcolor
@@ -680,7 +680,7 @@ EOF
 function _chsource() {
 	if [[ $mirror == "" ]]; then mirror="us"; fi
 	if [[ $DISTRO == Debian ]]; then
-		if [[ ${CODENAME} == "bullseye" ]]; then
+		if [[ "$CODENAME" =~ ("bullseye"|"bookworm") ]]; then
 			if [[ $mirror == "tuna" ]]; then
 				cp ${local_setup_template}source.list/debian.new.tuna.template /etc/apt/sources.list
 			else
@@ -711,12 +711,12 @@ function _addPHP() {
 	if [[ $DISTRO == "Ubuntu" ]]; then
 		# add php7.4
 		apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0x5a16e7281be7a449 >/dev/null 2>&1
-		LC_ALL=en_US.UTF-8 add-apt-repository ppa:ondrej/php -y >/dev/null 2>&1
+		add-apt-repository ppa:ondrej/php -y >/dev/null 2>&1
 	elif [[ $DISTRO == "Debian" ]]; then
 		# add php for debian
-		printf "\n" | wget -q https://packages.sury.org/php/apt.gpg -O- | apt-key add - >/dev/null 2>&1
+		wget -q https://packages.sury.org/php/apt.gpg -O /etc/apt/trusted.gpg.d/deb.sury.org-php.gpg 2>&1
 		cat >/etc/apt/sources.list.d/php.list <<DPHP
-deb https://packages.sury.org/php/ $(lsb_release -sc) main
+deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/trusted.gpg.d/deb.sury.org-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main
 DPHP
 	fi
 	DEBIAN_FRONTEND=noninteractive apt-get -yqq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" update >>"${OUTTO}" 2>&1
@@ -802,7 +802,9 @@ function _insngx() {
 
 	cp ${local_setup_template}nginx/proxy.conf.template /etc/nginx/snippets/proxy.conf
 
-	svn export https://github.com/Naereen/Nginx-Fancyindex-Theme/trunk/Nginx-Fancyindex-Theme-dark /srv/fancyindex >>"${OUTTO}" 2>&1
+	# Download nginx fancyindex theme
+	wget -t3 -T20 -q -O /tmp/fancyindex.zip https://codeload.github.com/Naereen/Nginx-Fancyindex-Theme/zip/refs/heads/master >>"${OUTTO}" 2>&1
+	unzip -o -j /tmp/fancyindex.zip "Nginx-Fancyindex-Theme-master/Nginx-Fancyindex-Theme-dark/*" -d "/srv/fancyindex" >>"${OUTTO}" 2>&1
 	cp ${local_setup_template}nginx/fancyindex.conf.template /etc/nginx/snippets/fancyindex.conf
 	sed -i 's/href="\/[^\/]*/href="\/fancyindex/g' /srv/fancyindex/header.html
 	sed -i 's/src="\/[^\/]*/src="\/fancyindex/g' /srv/fancyindex/footer.html
@@ -814,7 +816,7 @@ function _insngx() {
 	fi
 
 	mkdir -p /var/log/nginx/
-	chown -R www-data.www-data /var/log/nginx/
+	chown -R www-data:www-data /var/log/nginx/
 	systemctl restart nginx
 	systemctl restart php7.4-fpm
 }
@@ -822,7 +824,7 @@ function _insngx() {
 function _insnodejs() {
 	# install Nodejs for background service
 	cd /tmp || exit 1
-	curl -sL https://deb.nodesource.com/setup_14.x -o nodesource_setup.sh
+	curl -sL --retry 3 --retry-max-time 60 https://deb.nodesource.com/setup_18.x -o nodesource_setup.sh
 	bash nodesource_setup.sh >>"${OUTTO}" 2>&1
 	exitstatus=$?
 	counter=0
@@ -986,7 +988,7 @@ function _insapps() {
 	sleep 1
 	if [[ "$app_list" =~ "transmission" ]]; then
 		echo -e "XXX\n36\n$INFO_TEXT_INSTALLAPP_2\nXXX"
-		bash ${local_setup_script}transmission.sh "${OUTTO}" "${cdn}" >/dev/null 2>&1
+		bash ${local_setup_script}transmission.sh "${OUTTO}" "${cdn}" "${tr_ver}" >/dev/null 2>&1
 		echo -e "XXX\n43\n$INFO_TEXT_INSTALLAPP_2$INFO_TEXT_DONE\nXXX"
 	else
 		echo -e "XXX\n43\n$INFO_TEXT_INSTALLAPP_2$INFO_TEXT_SKIP\nXXX"
@@ -1361,11 +1363,12 @@ de_ver=""
 qbit_libt_ver=""
 de_libt_ver=""
 rt_ver=""
+tr_ver=""
 
 #################################################################################
 # OPT GENERATOR
 #################################################################################
-if ! ARGS=$(getopt -a -o d:hrH:p:P:s:t:u: -l domain:,help,ftp-ip:,lang:,reboot,with-log,no-log,with-ftp,no-ftp,with-bbr,no-bbr,with-cf,with-sf,with-osdn,with-github,with-rtorrent,with-rutorrent,with-flood,with-transmission,with-qbittorrent,with-deluge,with-mktorrent,with-ffmpeg,with-filebrowser,with-linuxrar,qbittorrent-version:,deluge-version:,qbit-libt-version:,de-libt-version:,rtorrent-version:,hostname:,port:,username:,password:,source:,theme:,tz:,timezone: -- "$@")
+if ! ARGS=$(getopt -a -o d:hrH:p:P:s:t:u: -l domain:,help,ftp-ip:,lang:,reboot,with-log,no-log,with-ftp,no-ftp,with-bbr,no-bbr,with-cf,with-sf,with-osdn,with-github,with-rtorrent,with-rutorrent,with-flood,with-transmission,with-qbittorrent,with-deluge,with-mktorrent,with-ffmpeg,with-filebrowser,with-linuxrar,qbittorrent-version:,deluge-version:,qbit-libt-version:,de-libt-version:,rtorrent-version:,transmission-version:,hostname:,port:,username:,password:,source:,theme:,tz:,timezone: -- "$@")
 then
 	_usage
     exit 1
@@ -1396,7 +1399,7 @@ while true; do
 		fi
 		shift
 		;;
-	-u | --user)
+	-u | --username)
 		onekey=1
 		username="$2"
 		count=0
@@ -1505,6 +1508,7 @@ while true; do
 	--qbit-libt-version) qbit_libt_ver="--lt $2"; shift;;
 	--de-libt-version) de_libt_ver="--lt $2"; shift;;
 	--rtorrent-version) rt_ver="--version $2"; shift;;
+	--transmission-version) tr_ver="--version $2"; shift;;
 	--)
 		shift
 		break
